@@ -1,0 +1,62 @@
+<!--
+  apple-form-post-callback.html — example backend response for Apple's
+  form_post flow.
+
+  Background: Apple's `response_mode=form_post` POSTs the id_token, code,
+  state, and (on first sign-in only) the user's name/email to a URL of
+  your choosing. Apple POSTs as `application/x-www-form-urlencoded`. The
+  POST goes to your **backend**, not your static HTML — so you need a
+  server-side handler.
+
+  Two valid response patterns:
+
+  Pattern A — RECOMMENDED. Backend receives POST, validates, creates a
+  session row, then 302-redirects the browser to your normal
+  `native-callback.html` with a session token in the query string:
+
+      302 Location: https://yourapp.com/native-callback.html
+                    ?session_token=opaque-server-issued-token
+                    &state=...
+
+  The state retains the deeplink scheme that the `oauth.apple({…})` helper
+  encoded, so `<despia-oauth-callback>` knows where to fire the deeplink.
+
+  Pattern B — fallback when 302 isn't possible. Return this HTML page
+  directly. Substitute the values server-side before sending.
+
+  This file is the Pattern B template. Strip out the example PHP/templating
+  syntax and replace with your stack of choice.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Completing sign in…</title>
+</head>
+<body>
+  <despia-oauth-callback></despia-oauth-callback>
+
+  <!--
+    Backend writes these into a meta or script tag before serving:
+      const STATE = '<%= request.body.state %>'        // echo Apple's state
+      const SESSION_TOKEN = '<%= sessionToken %>'      // your server-issued token
+
+    The component will read state to get the deeplink scheme, and forward
+    session_token to the WebView via the deeplink. Your /auth page reads
+    session_token and POSTs to your /api/session/exchange to get back a
+    real session.
+  -->
+  <script>
+    // Move POSTed form fields into the query string so the web component
+    // can find them. (Server-rendered values go in here.)
+    const params = new URLSearchParams({
+      session_token: 'REPLACE_WITH_SERVER_TOKEN',
+      state: 'REPLACE_WITH_APPLE_STATE',
+    })
+    history.replaceState(null, '', window.location.pathname + '?' + params.toString())
+  </script>
+
+  <script type="module" src="https://unpkg.com/@despia/oauth/dist/umd/web-components.min.js"></script>
+</body>
+</html>

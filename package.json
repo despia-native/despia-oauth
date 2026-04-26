@@ -1,0 +1,137 @@
+{
+  "name": "@despia/oauth",
+  "version": "0.1.0",
+  "description": "OAuth for Despia apps. Native ASWebAuthenticationSession (iOS) and Chrome Custom Tabs (Android) via the Despia URL-scheme bridge. Drop-in oauth.google() / oauth.apple() / oauth.tiktok() / oauth.custom() helpers and <despia-oauth-callback> / <despia-oauth-tokens> web components. Works with React, Vue, Svelte, Supabase, Convex, Firebase, custom backends. Zero runtime dependencies.",
+  "keywords": [
+    "despia",
+    "oauth",
+    "oauth2",
+    "google-signin",
+    "apple-signin",
+    "sign-in-with-apple",
+    "tiktok-login",
+    "supabase",
+    "convex",
+    "firebase",
+    "react",
+    "vue",
+    "svelte",
+    "web-components",
+    "custom-elements",
+    "ios",
+    "android",
+    "aswebauthenticationsession",
+    "chrome-custom-tabs"
+  ],
+  "license": "MIT",
+  "author": "Despia",
+  "homepage": "https://setup.despia.com/native-features/oauth",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/despia/oauth.git"
+  },
+  "bugs": {
+    "url": "https://github.com/despia/oauth/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "unpkg": "./dist/umd/despia-oauth.min.js",
+  "jsdelivr": "./dist/umd/despia-oauth.min.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "import": "./dist/react/index.js",
+      "require": "./dist/react/index.cjs"
+    },
+    "./vue": {
+      "types": "./dist/vue/index.d.ts",
+      "import": "./dist/vue/index.js",
+      "require": "./dist/vue/index.cjs"
+    },
+    "./svelte": {
+      "types": "./dist/svelte/index.d.ts",
+      "import": "./dist/svelte/index.js",
+      "require": "./dist/svelte/index.cjs"
+    },
+    "./web-components": {
+      "types": "./dist/web-components/index.d.ts",
+      "import": "./dist/web-components/index.js",
+      "require": "./dist/web-components/index.cjs"
+    },
+    "./web-components/manual": {
+      "types": "./dist/web-components/manual.d.ts",
+      "import": "./dist/web-components/manual.js",
+      "require": "./dist/web-components/manual.cjs"
+    },
+    "./providers/google": {
+      "types": "./dist/providers/google.d.ts",
+      "import": "./dist/providers/google.js",
+      "require": "./dist/providers/google.cjs"
+    },
+    "./providers/apple": {
+      "types": "./dist/providers/apple.d.ts",
+      "import": "./dist/providers/apple.js",
+      "require": "./dist/providers/apple.cjs"
+    },
+    "./providers/tiktok": {
+      "types": "./dist/providers/tiktok.d.ts",
+      "import": "./dist/providers/tiktok.js",
+      "require": "./dist/providers/tiktok.cjs"
+    },
+    "./providers/supabase": {
+      "types": "./dist/providers/supabase.d.ts",
+      "import": "./dist/providers/supabase.js",
+      "require": "./dist/providers/supabase.cjs"
+    },
+    "./templates/native-callback.html": "./templates/native-callback.html",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "templates",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "tsup --watch",
+    "pretest": "npm run build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
+  },
+  "peerDependencies": {
+    "react": ">=16.8.0",
+    "vue": ">=3.0.0",
+    "svelte": ">=3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": { "optional": true },
+    "vue": { "optional": true },
+    "svelte": { "optional": true }
+  },
+  "devDependencies": {
+    "@testing-library/react": "^14.0.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "jsdom": "^23.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "svelte": "^4.2.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0",
+    "vue": "^3.4.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

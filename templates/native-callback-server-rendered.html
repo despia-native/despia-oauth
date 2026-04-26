@@ -1,0 +1,115 @@
+<!--
+  native-callback-server-rendered.html — recommended template when your
+  backend serves both the callback page AND the OAuth code-exchange.
+
+  In this pattern, the SAME server-side request handler that responds to
+  GET /native-callback?code=xxx&state=yyy:
+    1. Reads the `code` from the query string
+    2. Exchanges it with the IdP server-side (using your Client Secret)
+    3. Creates a session in your DB and mints a session token
+    4. Renders this HTML with the session token already injected into the URL
+
+  No client-side fetch back to your own backend, no double round trip,
+  Client Secret never leaves the server.
+
+  This is the better pattern over `<despia-oauth-callback exchange-endpoint="…">`
+  whenever your callback page and backend share an origin (i.e., you're
+  not deploying the frontend to a static CDN separate from your API).
+
+  ============================================================================
+  EXAMPLE Express handler for the GET that serves this page
+  ============================================================================
+
+    // GET /native-callback?code=xxx&state=yyy
+    app.get('/native-callback', async (req, res) => {
+      const { code, state } = req.query
+
+      try {
+        // 1. Exchange code with the IdP using your server-side Client Secret
+        const tokens = await exchangeCodeWithIdP(code, req.query.redirect_uri)
+
+        // 2. Create or sign in the user, mint your session token
+        const sessionToken = await createSessionFromIdpTokens(tokens)
+
+        // 3. Render the HTML below with sessionToken and state injected.
+        //    Substitute your templating engine of choice (EJS, Nunjucks, etc).
+        //    The values go into the URL itself via history.replaceState so
+        //    <despia-oauth-callback> can read them.
+        res.send(renderTemplate('native-callback-server-rendered.html', {
+          sessionToken,
+          state,  // pass through original state so deeplink_scheme survives
+        }))
+      } catch (err) {
+        // Render the same template with an error instead of a session token.
+        res.send(renderTemplate('native-callback-server-rendered.html', {
+          error: 'exchange_failed',
+          errorDescription: err.message,
+          state: req.query.state,
+        }))
+      }
+    })
+
+  ============================================================================
+  EXAMPLE alternative: 302 redirect instead of rendering this template
+  ============================================================================
+
+    res.redirect(302,
+      `/native-callback-static.html?session_token=${encodeURIComponent(sessionToken)}` +
+      `&state=${encodeURIComponent(state)}`
+    )
+
+    Then `native-callback-static.html` is just <despia-oauth-callback />
+    with no rendering needed. Pick whichever pattern fits your stack.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Completing sign in…</title>
+</head>
+<body>
+  <despia-oauth-callback></despia-oauth-callback>
+
+  <!--
+    Server template substitutes these values before sending. The web
+    component reads them from the query string after history.replaceState
+    moves them out of the server-side variables.
+
+    ON SUCCESS substitute:
+      SESSION_TOKEN_HERE  → your minted session token
+      STATE_HERE          → the OAuth state value (carries deeplink scheme)
+    Leave the error fields as empty strings.
+
+    ON ERROR substitute:
+      ERROR_HERE             → 'exchange_failed' or whatever
+      ERROR_DESCRIPTION_HERE → human readable
+      STATE_HERE             → the OAuth state value
+    Leave session_token empty.
+  -->
+  <script>
+    (function () {
+      var sessionToken     = 'SESSION_TOKEN_HERE'
+      var oauthError       = 'ERROR_HERE'
+      var oauthErrorDesc   = 'ERROR_DESCRIPTION_HERE'
+      var state            = 'STATE_HERE'
+
+      var params = new URLSearchParams()
+      if (state) params.set('state', state)
+      if (sessionToken && sessionToken !== 'SESSION_TOKEN_HERE') {
+        params.set('session_token', sessionToken)
+      }
+      if (oauthError && oauthError !== 'ERROR_HERE') {
+        params.set('error', oauthError)
+        if (oauthErrorDesc) params.set('error_description', oauthErrorDesc)
+      }
+      // Replace the URL so <despia-oauth-callback> sees session_token/error
+      // in the query string, just like it would for the static template.
+      // Keeps the original `code` and other IdP params out of the way.
+      history.replaceState(null, '', window.location.pathname + '?' + params.toString())
+    })()
+  </script>
+
+  <script type="module" src="https://unpkg.com/@despia/oauth/dist/umd/web-components.min.js"></script>
+</body>
+</html>
