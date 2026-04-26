@@ -11,7 +11,6 @@ export default defineConfig({
     'providers/google': 'src/providers/google.ts',
     'providers/apple': 'src/providers/apple.ts',
     'providers/tiktok': 'src/providers/tiktok.ts',
-    'providers/supabase': 'src/providers/supabase.ts',
   },
   format: ['esm', 'cjs'],
   dts: true,

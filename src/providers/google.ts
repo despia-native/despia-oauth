@@ -20,12 +20,6 @@ export interface GoogleConfig extends BaseOAuthConfig {
    * which is what most apps want.
    */
   scopes?: string[]
-  /**
-   * The path on your backend where the authorization code is exchanged for
-   * tokens. Required for native; on web you typically don't need this since
-   * Supabase/Firebase/etc. handle the round-trip for you.
-   */
-  backendCallbackPath?: string
   /** Path on your app for the WebView's `/native-callback`. Defaults to `/native-callback.html`. */
   nativeCallbackPath?: string
   /** Path on your app where the web flow lands. Defaults to `/auth`. */

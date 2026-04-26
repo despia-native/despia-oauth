@@ -85,11 +85,6 @@
       "import": "./dist/providers/tiktok.js",
       "require": "./dist/providers/tiktok.cjs"
     },
-    "./providers/supabase": {
-      "types": "./dist/providers/supabase.d.ts",
-      "import": "./dist/providers/supabase.js",
-      "require": "./dist/providers/supabase.cjs"
-    },
     "./templates/native-callback.html": "./templates/native-callback.html",
     "./package.json": "./package.json"
   },
