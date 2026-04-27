@@ -25,6 +25,28 @@ npm install @despia/oauth
 5. Despia closes the browser and navigates your WebView to `/auth?...`
 6. `/auth` reads tokens and sets your session
 
+## Selling point: it auto-detects `?` vs `#`
+
+Most providers put tokens in either:
+
+- **Query**: `?access_token=...&refresh_token=...`
+- **Fragment**: `#access_token=...&refresh_token=...`
+
+This package handles both automatically:
+
+- `<despia-oauth-callback>` and `<despia-oauth-tokens>` (and `parseCallback()`) default to **checking both**.
+- Query wins if both are present.
+- `&` separators are handled normally via `URLSearchParams`.
+
+If you want to force a specific mode, set `tokenLocation` when opening:
+
+```ts
+oauth.signIn({ url, deeplinkScheme, appOrigin, tokenLocation: 'fragment' }) // hash
+oauth.signIn({ url, deeplinkScheme, appOrigin, tokenLocation: 'query' })    // query
+oauth.signIn({ url, deeplinkScheme, appOrigin, tokenLocation: 'both' })     // default
+oauth.signIn({ url, deeplinkScheme, appOrigin, tokenLocation: 'code', exchangeEndpoint })
+```
+
 ## 1) Sign-in button (any provider)
 
 Build the authorize URL however you want (Supabase, Auth0, Clerk, custom backend…) and pass it in:
