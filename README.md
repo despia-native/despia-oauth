@@ -30,6 +30,167 @@ npm install @despia/oauth
 
 ---
 
+## Provider metadata & examples
+
+Quick map:
+
+| Provider | Client API | You configure (IdP) | Callback page | Server usually does |
+|----------|------------|----------------------|-----------------|----------------------|
+| **Generic** | `oauth.signIn({ url, … })` | Whatever URL you put in `url` | `redirect_uri` in that URL → `/native-callback.html` | Optional code → tokens |
+| **Google** | Same — build Google’s authorize URL (or use Supabase/Auth0/etc.) | [Google OAuth](https://developers.google.com/identity/protocols/oauth2/web-server) client id + **Authorized redirect URIs** | Exact HTTPS URL you registered | Code exchange → Google token endpoint |
+| **Apple** | `oauth.apple({ … })` | [Sign in with Apple](https://developer.apple.com/sign-in-with-apple/) Services ID + Return URLs | iOS/web: popup redirect URI; Android: `appOrigin` + `exitPath` or `formPostHandlerUrl` | `form_post` → small POST handler (below) |
+| **TikTok** | `oauth.tiktok({ … })` | [TikTok Login Kit](https://developers.tiktok.com/doc/login-kit-web/) client key + redirect URL in portal | Native: `appOrigin + exitPath`; Web: `appOrigin + authPath` | **Required** — Client Secret never in the app |
+
+Always use **`https://` `appOrigin`** for redirect targets Despia’s secure browser can load.
+
+### Generic OAuth (`oauth.signIn`)
+
+You own the full authorize URL. This package only appends `state` (CSRF + deeplink scheme + token spec) and opens the URL.
+
+```ts
+oauth.signIn({
+  url: authorizeUrl, // must already include client_id, redirect_uri, scope, …
+  deeplinkScheme: 'myapp',
+  appOrigin: 'https://yourapp.com',
+  tokenLocation: 'both', // or 'query' | 'fragment' | 'code'
+  exchangeEndpoint: 'https://api.yourapp.com/auth/exchange', // only if tokenLocation === 'code'
+})
+```
+
+Set **`redirect_uri`** (inside `url`) to the same origin/path you actually host for `/native-callback` (often `https://yourapp.com/native-callback.html`). The WebView return path is still driven by encoded `state`, not by guessing from Google.
+
+### Google Sign-In (via `oauth.signIn`)
+
+There is no separate `oauth.google` — build [Google’s authorization request](https://developers.google.com/identity/protocols/oauth2/web-server#creatinganauthorizationrequest) (or your IdP’s Google button URL) and pass it to `oauth.signIn`.
+
+**Metadata**
+
+| Item | Typical value |
+|------|----------------|
+| Authorize | `https://accounts.google.com/o/oauth2/v2/auth` |
+| `redirect_uri` | `https://yourapp.com/native-callback.html` (must match Google Cloud **Authorized redirect URIs** exactly) |
+| `response_type` | `code` (recommended) → `tokenLocation: 'code'` + `exchangeEndpoint`; legacy implicit → `tokenLocation: 'fragment'` or `'both'` |
+| `scope` | e.g. `openid email profile` |
+
+```ts
+const redirectUri = `${appOrigin}/native-callback.html`
+const q = new URLSearchParams({
+  client_id: GOOGLE_WEB_CLIENT_ID,
+  redirect_uri: redirectUri,
+  response_type: 'code',
+  scope: 'openid email profile',
+  access_type: 'offline',
+  prompt: 'consent',
+})
+oauth.signIn({
+  url: `https://accounts.google.com/o/oauth2/v2/auth?${q}`,
+  deeplinkScheme: 'myapp',
+  appOrigin,
+  tokenLocation: 'code',
+  exchangeEndpoint: `${API_ORIGIN}/auth/google/exchange`,
+})
+```
+
+**Supabase-style Google** (same idea: correct `redirect_to` + provider):
+
+```ts
+const redirectTo = encodeURIComponent(`${appOrigin}/native-callback.html`)
+oauth.signIn({
+  url: `https://<project>.supabase.co/auth/v1/authorize?provider=google&redirect_to=${redirectTo}`,
+  deeplinkScheme: 'myapp',
+  appOrigin,
+  tokenLocation: 'fragment', // or 'both' — match how Supabase returns tokens
+})
+```
+
+### Apple Sign-In (`oauth.apple`)
+
+| Surface | Behavior |
+|---------|----------|
+| Despia **iOS** native + **web** | [Apple JS SDK](https://developer.apple.com/documentation/sign_in_with_apple/sign_in_with_apple_js) popup — load `https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js`, then `await oauth.apple({ … })` returns `{ kind: 'apple-popup', id_token, code, user? }`. |
+| Despia **Android** native | Redirect to `appleid.apple.com`; default `response_mode: 'fragment'` → tokens land on `exitPath`. Use `response_mode: 'form_post'` + `formPostHandlerUrl` if Apple is configured that way → **server** must POST→302 (see below). |
+
+```html
+<script src="https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js"></script>
+```
+
+```ts
+const result = await oauth.apple({
+  servicesId: 'com.example.web',
+  deeplinkScheme: 'myapp',
+  appOrigin: 'https://yourapp.com',
+  // Android only when using form_post:
+  // responseMode: 'form_post',
+  // formPostHandlerUrl: 'https://yourapp.com/api/apple/callback',
+})
+if (result.kind === 'apple-popup') {
+  // send result.id_token / result.code to your backend
+}
+```
+
+### TikTok Login (`oauth.tiktok`)
+
+Uses `client_key`, comma-separated scopes, and **always** encodes a code flow + `exchangeEndpoint` in `state` for `<despia-oauth-callback>` to POST to your server.
+
+| Item | Notes |
+|------|--------|
+| Authorize | `https://www.tiktok.com/v2/auth/authorize/` (built for you) |
+| Redirect (native) | `appOrigin + exitPath` (default `/native-callback.html`) — register that URL in TikTok portal |
+| Exchange | Your `exchangeEndpoint` receives JSON `{ code, redirect_uri, state }`; respond with JSON `{ access_token, refresh_token? }` (any subset of token fields you need). |
+
+```ts
+oauth.tiktok({
+  clientKey: TIKTOK_CLIENT_KEY,
+  exchangeEndpoint: 'https://api.yourapp.com/auth/tiktok/exchange',
+  deeplinkScheme: 'myapp',
+  appOrigin: 'https://yourapp.com',
+})
+```
+
+### Server examples (code exchange + Apple POST)
+
+**1) OAuth code exchange** (Google generic code flow, TikTok, or any IdP where the callback element POSTs JSON)
+
+`<despia-oauth-callback>` POSTs:
+
+```http
+POST /auth/google/exchange
+Content-Type: application/json
+
+{"code":"<auth code>","redirect_uri":"https://yourapp.com/native-callback.html","state":"<opaque>"}
+```
+
+Your handler should validate `state` / CSRF if you store it, exchange `code` at Google’s token endpoint (or TikTok’s), then return JSON with any of: `access_token`, `refresh_token`, `id_token`, `session_token` — those keys are forwarded on the `{scheme}://oauth/auth?…` deeplink.
+
+```ts
+// Example shape (Deno / Cloudflare Workers / Node 18+ with Request)
+export async function postJsonExchange(req: Request): Promise<Response> {
+  if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 })
+  const { code, redirect_uri } = await req.json()
+  // const tokens = await exchangeWithGoogleOrTikTok(code, redirect_uri)
+  const tokens = { access_token: '…', refresh_token: '…' }
+  return Response.json(tokens)
+}
+```
+
+**2) Apple `form_post` bridge** (Android): POST from Apple → 302 to static HTML with query params.
+
+```ts
+import { handleAppleFormPostRequest } from '@despia/oauth/server/apple-form-post'
+
+export default async function handler(req: Request): Promise<Response> {
+  return handleAppleFormPostRequest(req, {
+    appOrigin: 'https://yourapp.com',
+    nativeCallbackPath: '/native-callback.html',
+    // mintSessionToken: async (fields) => 'opaque-session-id',
+  })
+}
+```
+
+Register **`https://yourapp.com/api/apple/callback`** (or whatever route serves `handler`) in Apple’s Services ID **Return URLs** — not the `.html` file itself when using `form_post`.
+
+---
+
 ## `oauth` (high level)
 
 ```ts
