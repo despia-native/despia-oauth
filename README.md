@@ -37,10 +37,10 @@ sequenceDiagram
 Apple on Android sometimes uses `form_post`: Apple POSTs a form body to your server instead of putting tokens in the URL. Static HTML can’t read that body, so add a route that turns the POST into a normal GET on `/native-callback.html?...`. Helper: `@despia/oauth/server/apple-form-post` (section at the bottom of this file).
 
 ```mermaid
-flowchart LR
-  A["Apple POST\napplication/x-www-form-urlencoded"] --> B["Your route\n@despia/oauth/server/apple-form-post"]
-  B --> C["302 → /native-callback.html\n?id_token=…&state=…"]
-  C --> D["Same as above:\ncallback element → deeplink → /auth"]
+flowchart TB
+  A[Apple POST] --> B[Server handler]
+  B --> C[302 → native-callback.html?…]
+  C --> D[Same flow as diagram above]
 ```
 
 ## Callback shape (query, hash, code)
