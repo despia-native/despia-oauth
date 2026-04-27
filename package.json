@@ -1,6 +1,6 @@
 {
   "name": "@despia/oauth",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "OAuth for Despia apps. Native ASWebAuthenticationSession (iOS) and Chrome Custom Tabs (Android) via the Despia URL-scheme bridge. Drop-in oauth.google() / oauth.apple() / oauth.tiktok() / oauth.custom() helpers and <despia-oauth-callback> / <despia-oauth-tokens> web components. Works with React, Vue, Svelte, Supabase, Convex, Firebase, custom backends. Zero runtime dependencies.",
   "keywords": [
     "despia",
