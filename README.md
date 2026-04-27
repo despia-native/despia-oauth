@@ -13,17 +13,64 @@ This package is a small wrapper around that mechanism:
 - `<despia-oauth-callback>` implements `/native-callback` (runs inside the secure browser session)
 - `<despia-oauth-tokens>` implements `/auth` (runs inside your WebView)
 
+## Design goals (what this SDK optimizes for)
+
+General OAuth SDKs often bundle provider clients, framework adapters, and heavy assumptions. **`@despia/oauth` is intentionally narrow**: it focuses on the **Despia native secure browser ↔ WebView handoff** (the `oauth://` bridge and the `{scheme}://oauth/...` return path), while you keep **full control** of authorize URLs (Supabase, Auth0, Clerk, your own backend, etc.).
+
+What you get in practice:
+
+- **Zero runtime dependencies** — small surface area, easy to audit and ship.
+- **Provider-agnostic** — you pass whatever authorize URL your IdP needs; we don’t lock you to one vendor.
+- **Query, fragment, and code** — callback parsing defaults to **query + fragment** (query wins); code flow can POST to your `exchangeEndpoint`.
+- **First-class Apple `form_post` story** — optional NPM server helper turns a POST body into a **302** to your static `/native-callback.html?...` so the same web components keep working (see **Apple `form_post` (Android)** later in this README).
+
+That combination is uncommon in “generic web OAuth” libraries because most of them are not built around **in-app secure browser sessions** and a **fixed OS-level deeplink contract** the way Despia is.
+
 ## Install
 
 ```bash
 npm install @despia/oauth
 ```
 
+## End-to-end flow (native)
+
+```mermaid
+sequenceDiagram
+  participant WV as WebView (your app)
+  participant DR as Despia runtime
+  participant SB as Secure browser (ASWebAuth / Custom Tabs)
+  participant IdP as Your IdP (any URL you built)
+
+  WV->>DR: oauth.signIn → oauth://?url=…
+  DR->>SB: Opens IdP in secure session
+  SB->>IdP: User signs in
+  IdP->>SB: HTTP redirect to /native-callback (query, fragment, or code)
+  Note over SB: Static page: despia-oauth-callback
+  SB->>DR: Deeplink myapp://oauth/auth?… (oauth/ required)
+  DR->>WV: WebView navigates to /auth?…
+  Note over WV: despia-oauth-tokens → your session
+```
+
+**In one line:** sign-in opens the secure browser → IdP lands on **`/native-callback`** → that page emits **`{scheme}://oauth/auth?...`** → Despia returns the WebView to **`/auth`** with the same params.
+
+### Flow variant: Apple `form_post` (Android)
+
+Apple may POST credentials to your redirect URI instead of putting them in the URL. A **static HTML** file cannot read that POST body, so you add a **tiny server route** that reads the body and **redirects** to the same static page with tokens in the **query string** (what `<despia-oauth-callback>` already expects).
+
+```mermaid
+flowchart LR
+  A["Apple POST\n/application/x-www-form-urlencoded"] --> B["Your route\n(e.g. @despia/oauth/server/apple-form-post)"]
+  B --> C["302 → /native-callback.html\n?id_token=…&state=…"]
+  C --> D["Same sequence as above:\ndespia-oauth-callback → deeplink → /auth"]
+```
+
+After the redirect, the rest of the diagram is **identical** to the native flow: static callback page → `myapp://oauth/auth?...` → `/auth`.
+
 ## How it works (in one minute)
 
 1. Your app calls `oauth.signIn({ url, ... })`
 2. Despia opens a secure browser session (ASWebAuth / Custom Tabs)
-3. Provider redirects to your `/native-callback` page
+3. Provider redirects to your `/native-callback` page (or, for Apple `form_post`, your **server** first redirects to `/native-callback.html?...`)
 4. `/native-callback` fires `myapp://oauth/auth?...` (**`oauth/` is required**)
 5. Despia closes the browser and navigates your WebView to `/auth?...`
 6. `/auth` reads tokens and sets your session
