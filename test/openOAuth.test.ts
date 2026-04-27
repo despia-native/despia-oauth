@@ -101,6 +101,57 @@ describe('openOAuth', () => {
     ).toThrow(/SSR/)
   })
 
+  it('requireDespiaNative throws not_despia_native on web without navigating', () => {
+    setUA('Mozilla/5.0 (Macintosh)')
+    const originalLocation = window.location
+    delete (window as { location?: Location }).location
+    // @ts-expect-error - partial Location for test
+    window.location = { href: 'https://stay-here.test/' }
+
+    try {
+      let err: DespiaOAuthError | undefined
+      try {
+        openOAuth('https://accounts.google.com/o/oauth2/v2/auth?x=1', {
+          requireDespiaNative: true,
+        })
+      } catch (e) {
+        err = e as DespiaOAuthError
+      }
+      expect(err?.code).toBe('not_despia_native')
+      expect(window.location.href).toBe('https://stay-here.test/')
+    } finally {
+      // @ts-expect-error - restore
+      window.location = originalLocation
+    }
+  })
+
+  it('requireDespiaNative still opens native bridge on Despia', () => {
+    setUA('iPhone despia/1.0')
+    const cap = captureWindowDespia()
+    try {
+      const result = openOAuth('https://example.com/oauth', {
+        requireDespiaNative: true,
+      })
+      expect(result).toEqual({ kind: 'opened-native' })
+      expect(cap.calls).toHaveLength(1)
+    } finally {
+      cap.restore()
+    }
+  })
+
+  it('requireDespiaNative throws not_despia_native on SSR', () => {
+    let err: DespiaOAuthError | undefined
+    try {
+      openOAuth('https://example.com/oauth', {
+        runtime: { kind: 'ssr' },
+        requireDespiaNative: true,
+      })
+    } catch (e) {
+      err = e as DespiaOAuthError
+    }
+    expect(err?.code).toBe('not_despia_native')
+  })
+
   it('honours runtime override (no UA sniffing)', () => {
     setUA('completely-unrelated-ua')
     const cap = captureWindowDespia()

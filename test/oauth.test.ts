@@ -38,6 +38,22 @@ function extractOAuthUrl(despiaCommand: string): URL {
 }
 
 describe('oauth.signIn (universal)', () => {
+  it('requireDespiaNative throws not_despia_native when not in Despia native', () => {
+    setUA('Mozilla/5.0 (Macintosh)')
+    let err: DespiaOAuthError | undefined
+    try {
+      oauth.signIn({
+        url: 'https://idp.example/oauth',
+        deeplinkScheme: 'myapp',
+        appOrigin: 'https://app.com',
+        requireDespiaNative: true,
+      })
+    } catch (e) {
+      err = e as DespiaOAuthError
+    }
+    expect(err?.code).toBe('not_despia_native')
+  })
+
   it('opens any URL via the despia bridge with state appended', () => {
     setUA('iPhone despia/1.0')
     const cap = captureWindowDespia()

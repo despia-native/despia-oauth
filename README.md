@@ -211,6 +211,7 @@ oauth.tiktok({ ... })   // TikTok authorize + code in state for exchange
 | `authPath` | `string` | no | WebView path after return. Default `/auth`. |
 | `tokenLocation` | `TokenLocation` | no | Default `'both'`. See [Token locations](#token-locations). |
 | `exchangeEndpoint` | `string` | if `tokenLocation === 'code'` | Absolute URL if callback origin ≠ API. |
+| `requireDespiaNative` | `boolean` | no | If `true`, throws `DespiaOAuthError` code `not_despia_native` on web/SSR so you can `catch` and run [web fallback](#openoauth--runtime). Same flag on `oauth.apple` / `oauth.tiktok`. |
 
 Returns `{ kind: 'opened-native' }` or `{ kind: 'navigating-web' }`.
 
@@ -227,6 +228,7 @@ Returns `{ kind: 'opened-native' }` or `{ kind: 'navigating-web' }`.
 | `responseMode` | `'fragment' \| 'form_post'` | no | Android. Default `'fragment'`. |
 | `formPostHandlerUrl` | `string` | if `responseMode === 'form_post'` | Absolute URL of your POST handler. |
 | `iosRedirectURI` | `string` | no | iOS/web popup; must match Apple portal. Default `appOrigin + '/'`. |
+| `requireDespiaNative` | `boolean` | no | If `true`, only Despia **native** runs Apple (throws before web popup or Android redirect). |
 
 - **iOS native** or **web:** uses Apple JS SDK (`window.AppleID`). You must load Apple’s script. Resolves to `OauthAppleIOSResult`: `{ kind: 'apple-popup', id_token, code, user? }`.
 - **Android native:** redirect to Apple; resolves to `OpenOAuthResult` like `signIn`.
@@ -242,6 +244,7 @@ Returns `{ kind: 'opened-native' }` or `{ kind: 'navigating-web' }`.
 | `authPath` | `string` | no | Default `/auth`. |
 | `scopes` | `string[]` | no | Default `['user.info.basic']`; joined with **commas** for TikTok. |
 | `exitPath` | `string` | no | Default `/native-callback.html`. Native redirect URI = `appOrigin + exitPath`. |
+| `requireDespiaNative` | `boolean` | no | If `true`, throws `not_despia_native` when not Despia native (same as `signIn`). |
 
 ---
 
@@ -251,37 +254,55 @@ Returns `{ kind: 'opened-native' }` or `{ kind: 'navigating-web' }`.
 import { openOAuth, detectRuntime } from '@despia/oauth'
 ```
 
-**`openOAuth(oauthUrl: string, options?: { runtime?: Runtime }): OpenOAuthResult`**
+**`openOAuth(oauthUrl: string, options?: { runtime?: Runtime; requireDespiaNative?: boolean }): OpenOAuthResult`**
 
 - `oauthUrl` must be absolute `http:` / `https:`.
 - Native: sets `window.despia = 'oauth://?url=' + encodeURIComponent(oauthUrl)`.
-- Web: `window.location.href = oauthUrl`.
+- Web (default): `window.location.href = oauthUrl`.
+- `requireDespiaNative: true`: if not Despia native, throws **`DespiaOAuthError`** with **`code === 'not_despia_native'`** (web or SSR) — **no navigation**. Use for try / catch web fallback.
 
-**`detectRuntime(): Runtime`** — what this library uses internally (`oauth.apple`, `openOAuth`, etc.). Same UA rules as below.
+**Try native, catch web** (same pattern for `oauth.signIn` / `oauth.apple` / `oauth.tiktok` with `requireDespiaNative: true`):
+
+```ts
+import { oauth, DespiaOAuthError } from '@despia/oauth'
+
+const url = buildAuthorizeUrlSomehow()
+
+try {
+  oauth.signIn({
+    url,
+    deeplinkScheme: 'myapp',
+    appOrigin: 'https://yourapp.com',
+    requireDespiaNative: true,
+  })
+} catch (e) {
+  if (e instanceof DespiaOAuthError && e.code === 'not_despia_native') {
+    // Same args without requireDespiaNative → full-page navigate on web
+    oauth.signIn({ url, deeplinkScheme: 'myapp', appOrigin: 'https://yourapp.com' })
+    return
+  }
+  throw e
+}
+```
+
+**`detectRuntime(): Runtime`** — internal / advanced; same UA rules as this package.
 
 | Return value | Meaning |
 |--------------|---------|
 | `{ kind: 'native', platform: 'ios' \| 'android' }` | `userAgent` contains `despia` (any case); iOS if UA matches iPhone/iPad/iPod. |
 | `{ kind: 'web' }` | Browser, not Despia. |
-| `{ kind: 'ssr' }` | No `navigator` — don’t build native OAuth URLs on the server. |
+| `{ kind: 'ssr' }` | No `navigator`. |
 
-**Your own checks (start of flow)** — we don’t ship `isDespia` / `isDespiaIOS` / `isDespiaAndroid` on the package; use `userAgent` in your app if you need to branch before OAuth:
+**Manual `userAgent` checks** (optional; only if you don’t use `requireDespiaNative`):
 
 ```ts
-// Detect if running in Despia
-const isDespia = navigator.userAgent.toLowerCase().includes('despia')
-
-// Detect iOS in Despia
-const isDespiaIOS =
-  isDespia &&
-  (navigator.userAgent.toLowerCase().includes('iphone') ||
-    navigator.userAgent.toLowerCase().includes('ipad'))
-
-// Detect Android in Despia
-const isDespiaAndroid = isDespia && navigator.userAgent.toLowerCase().includes('android')
+const ua = navigator.userAgent.toLowerCase()
+const isDespia = ua.includes('despia')
+const isDespiaIOS = isDespia && (ua.includes('iphone') || ua.includes('ipad'))
+const isDespiaAndroid = isDespia && ua.includes('android')
 ```
 
-`detectRuntime()` uses the same `despia` substring and also treats **iPod** as iOS (`/ipod/i`). Add `|| navigator.userAgent.toLowerCase().includes('ipod')` to the iOS check if you want identical behavior.
+`detectRuntime()` also treats **iPod** as iOS; add `|| ua.includes('ipod')` to match.
 
 ---
 

@@ -37,6 +37,13 @@ export type OpenOAuthResult =
 export interface OpenOAuthOptions {
   /** Override runtime detection. Mostly for tests. */
   runtime?: Runtime
+  /**
+   * When `true`, only runs the Despia native bridge (`window.despia`).
+   * If the runtime is **web** or **SSR**, throws {@link DespiaOAuthError}
+   * with code `not_despia_native` so you can `try` / `catch` and fall back
+   * to e.g. `window.location.href = url` or your own web OAuth flow.
+   */
+  requireDespiaNative?: boolean
 }
 
 export function openOAuth(
@@ -54,6 +61,15 @@ export function openOAuth(
   }
 
   const runtime = options.runtime ?? detectRuntime()
+
+  if (options.requireDespiaNative && runtime.kind !== 'native') {
+    throw new DespiaOAuthError(
+      'not_despia_native',
+      runtime.kind === 'ssr'
+        ? 'Not in Despia native (SSR). Call from the client, or catch and run web OAuth.'
+        : 'Not in Despia native. Catch `not_despia_native` and use full-page navigation or web sign-in.',
+    )
+  }
 
   if (runtime.kind === 'native') {
     if (typeof window === 'undefined') {

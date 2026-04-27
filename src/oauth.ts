@@ -35,6 +35,13 @@ interface BaseConfig {
   appOrigin: string
   /** Path that handles the OAuth return on your domain. Defaults to `/auth`. */
   authPath?: string
+  /**
+   * When `true`, opening the session throws {@link DespiaOAuthError} with
+   * code `not_despia_native` unless the runtime is Despia native — wrap in
+   * `try`/`catch` and run web OAuth in the `catch` (e.g. assign
+   * `window.location.href` to the same authorize URL).
+   */
+  requireDespiaNative?: boolean
 }
 
 const DEFAULT_AUTH_PATH = '/auth'
@@ -101,7 +108,9 @@ function signIn(config: OauthSignInConfig): OpenOAuthResult {
   const url = new URL(config.url)
   url.searchParams.set('state', encodeState({ scheme: config.deeplinkScheme, spec }))
 
-  return openOAuth(url.toString())
+  return openOAuth(url.toString(), {
+    requireDespiaNative: config.requireDespiaNative,
+  })
 }
 
 // ============================================================================
@@ -175,6 +184,15 @@ async function apple(
 
   const runtime = detectRuntime()
 
+  if (config.requireDespiaNative && runtime.kind !== 'native') {
+    throw new DespiaOAuthError(
+      'not_despia_native',
+      runtime.kind === 'ssr'
+        ? 'Not in Despia native (SSR). Call from the client, or catch and run web Apple sign-in.'
+        : 'Not in Despia native. Catch `not_despia_native` and run web Apple sign-in (e.g. full-page redirect).',
+    )
+  }
+
   // iOS native + web → JS SDK popup. Redirect on iOS = blank screen + App
   // Store rejection.
   if (
@@ -235,7 +253,10 @@ async function apple(
       }),
     }).toString()
 
-  return openOAuth(url, { runtime })
+  return openOAuth(url, {
+    runtime,
+    requireDespiaNative: config.requireDespiaNative,
+  })
 }
 
 // ============================================================================
@@ -300,7 +321,10 @@ function tiktok(config: OauthTikTokConfig): OpenOAuthResult {
       }),
     }).toString()
 
-  return openOAuth(url, { runtime })
+  return openOAuth(url, {
+    runtime,
+    requireDespiaNative: config.requireDespiaNative,
+  })
 }
 
 // ============================================================================
