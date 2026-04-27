@@ -1,15 +1,6 @@
 # Despia OAuth
 
-NPM: `@despia/oauth`. No runtime dependencies.
-
-On Despia, sign-in is basically two mechanics:
-
-- Native opens the IdP in a secure browser: `oauth://?url=...`
-- When you’re done, hit your app again with `oauth/` in the path: `{scheme}://oauth/...` (required)
-
-This repo wires that up: `oauth.signIn` for the open, `<despia-oauth-callback>` on whatever you serve as `/native-callback`, `<despia-oauth-tokens>` on `/auth`. You still build the authorize URL yourself (Supabase, Clerk, hand-rolled, whatever).
-
-## Install
+**`@despia/oauth`** — no runtime deps. Despia opens the IdP with `oauth://?url=…`; you return with `{scheme}://oauth/…` (that path segment is required). This package: `oauth.signIn`, `<despia-oauth-callback>`, `<despia-oauth-tokens>`. You build the authorize URL.
 
 ```bash
 npm install @despia/oauth
@@ -17,27 +8,23 @@ npm install @despia/oauth
 
 ## Flow
 
-1. `oauth.signIn` → Despia opens your IdP in a secure browser (`oauth://?url=…` under the hood).
-2. IdP redirects to `/native-callback` with tokens in the query, the hash, or `?code=` (your choice / IdP behavior).
-3. `<despia-oauth-callback>` sends `{scheme}://oauth/auth?…` so the secure session ends.
-4. WebView opens `/auth?…`; `<despia-oauth-tokens>` (or your own listener) reads the params.
+1. `oauth.signIn` → secure browser (ASWebAuth / Custom Tabs).
+2. IdP → `/native-callback` (query, `#hash`, or `?code=`).
+3. Callback element → `{scheme}://oauth/auth?…` → session closes.
+4. WebView → `/auth?…` → tokens element (or your code).
 
-**Apple `form_post` (Android):** Apple POSTs a form body to your redirect URL. Static HTML never sees that body, so handle POST on a small server route and **302** to `/native-callback.html?…` with the same fields as query params—then steps 3–4 are unchanged. Optional helper: `@despia/oauth/server/apple-form-post` (full snippet at the end of this README).
+**Apple `form_post`:** POST body, not a readable URL on static HTML. Tiny server route → **302** to `/native-callback.html?…` → steps 3–4 unchanged. Snippet below.
 
-## Callback shape (query, hash, code)
+## Tokens in the URL
 
-IdPs disagree on where tokens live (`?…`, `#…`, or `?code=`). By default the web components and `parseCallback()` look at **query and fragment** (query wins). Code flow: set `tokenLocation: 'code'` and either pass `exchangeEndpoint` or exchange yourself.
+Default: read **query + hash** (query wins). Code flow: `tokenLocation: 'code'` + `exchangeEndpoint` (or exchange yourself).
 
 ```ts
-oauth.signIn({ url, deeplinkScheme, appOrigin, tokenLocation: 'fragment' })
-oauth.signIn({ url, deeplinkScheme, appOrigin, tokenLocation: 'query' })
-oauth.signIn({ url, deeplinkScheme, appOrigin, tokenLocation: 'both' }) // default
-oauth.signIn({ url, deeplinkScheme, appOrigin, tokenLocation: 'code', exchangeEndpoint })
+oauth.signIn({ url, deeplinkScheme: 'myapp', appOrigin, tokenLocation: 'both' }) // default
+oauth.signIn({ url, deeplinkScheme: 'myapp', appOrigin, tokenLocation: 'code', exchangeEndpoint })
 ```
 
-## Quick start
-
-Two pages: `/native-callback` (runs inside the secure browser) and `/auth` (your WebView). One `oauth.signIn` from the app.
+## Pages
 
 **Sign-in**
 
@@ -48,23 +35,15 @@ oauth.signIn({
   url: 'https://your-idp.example/authorize?...',
   deeplinkScheme: 'myapp',
   appOrigin: 'https://yourapp.com',
-  tokenLocation: 'both',
 })
 ```
 
-**`/native-callback`** — e.g. `public/native-callback.html`:
+**`/native-callback.html`**
 
 ```html
-<!doctype html>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Completing sign in…</title>
-
 <despia-oauth-callback></despia-oauth-callback>
 <script type="module" src="https://unpkg.com/@despia/oauth/dist/umd/web-components.min.js"></script>
 ```
-
-With `tokenLocation: 'code'`, the callback element POSTs `{ code, redirect_uri, state }` to `exchangeEndpoint`, then fires `{scheme}://oauth/auth?...`.
 
 **`/auth`**
 
@@ -72,47 +51,20 @@ With `tokenLocation: 'code'`, the callback element POSTs `{ code, redirect_uri, 
 <despia-oauth-tokens></despia-oauth-tokens>
 <script type="module">
   import 'https://unpkg.com/@despia/oauth/dist/umd/web-components.min.js'
-
-  document.querySelector('despia-oauth-tokens').addEventListener('tokens', async (e) => {
-    const tokens = e.detail
-    // hand off to your backend / SDK
-  })
-</script>
-```
-
-Example with errors + POST session + optional redirect:
-
-```html
-<despia-oauth-tokens redirect-on-success="/"></despia-oauth-tokens>
-
-<script type="module">
-  import 'https://unpkg.com/@despia/oauth/dist/umd/web-components.min.js'
-
-  const el = document.querySelector('despia-oauth-tokens')
-
-  el.addEventListener('oauth-error', (e) => {
-    console.error(e.detail)
-  })
-
-  el.addEventListener('tokens', async (e) => {
-    await fetch('/api/session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(e.detail),
-      credentials: 'include',
-    })
+  document.querySelector('despia-oauth-tokens').addEventListener('tokens', (e) => {
+    /* e.detail → your backend / SDK */
   })
 </script>
 ```
 
 ## Gotchas
 
-- Deeplink path must include `oauth/`: `myapp://oauth/auth` yes, `myapp://auth` no.
-- `deeplinkScheme` is required; nothing invents it for you.
+- Use `myapp://oauth/...`, not `myapp://auth/...`.
+- `deeplinkScheme` is required.
 
 ## Apple `form_post` (Android)
 
-Apple may use `response_mode=form_post`: the redirect is a POST with `application/x-www-form-urlencoded` body. Serve a small endpoint that reads the body and returns **302** to your static `/native-callback.html?...` (same query params the callback element already understands), or mint a `session_token` server-side and redirect with that instead of raw `id_token` in the URL.
+POST from Apple → your handler → redirect to the same static callback with query params (or use `mintSessionToken` for an opaque `session_token` instead of `id_token` in the URL). Point Apple’s redirect URI at this route, not the `.html` file.
 
 ```ts
 import { handleAppleFormPostRequest } from '@despia/oauth/server/apple-form-post'
@@ -126,14 +78,9 @@ export default async function handler(req: Request): Promise<Response> {
 }
 ```
 
-Use this URL as Apple’s redirect URI for that flow—not the `.html` file directly.
-
 ## API
 
-- `oauth.signIn({ url, deeplinkScheme, appOrigin, tokenLocation?, exchangeEndpoint?, authPath? })`
-- `oauth.apple({ ... })` — iOS popup path, Android redirect
-- `oauth.tiktok({ ... })` — code + exchange
-- Lower level: `openOAuth`, `detectRuntime`, `encodeState` / `decodeState`, `parseCallback`, `watchCallbackUrl`, `handleNativeCallback`, `buildDeeplink`
+`oauth.signIn`, `oauth.apple`, `oauth.tiktok` · `openOAuth`, `detectRuntime`, `encodeState` / `decodeState`, `parseCallback`, `watchCallbackUrl`, `handleNativeCallback`, `buildDeeplink`
 
 ## License
 
