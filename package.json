@@ -70,21 +70,6 @@
       "import": "./dist/web-components/manual.js",
       "require": "./dist/web-components/manual.cjs"
     },
-    "./providers/google": {
-      "types": "./dist/providers/google.d.ts",
-      "import": "./dist/providers/google.js",
-      "require": "./dist/providers/google.cjs"
-    },
-    "./providers/apple": {
-      "types": "./dist/providers/apple.d.ts",
-      "import": "./dist/providers/apple.js",
-      "require": "./dist/providers/apple.cjs"
-    },
-    "./providers/tiktok": {
-      "types": "./dist/providers/tiktok.d.ts",
-      "import": "./dist/providers/tiktok.js",
-      "require": "./dist/providers/tiktok.cjs"
-    },
     "./templates/native-callback.html": "./templates/native-callback.html",
     "./package.json": "./package.json"
   },
