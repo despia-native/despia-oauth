@@ -55,6 +55,11 @@
       "import": "./dist/web-components/manual.js",
       "require": "./dist/web-components/manual.cjs"
     },
+    "./server/apple-form-post": {
+      "types": "./dist/server/apple-form-post.d.ts",
+      "import": "./dist/server/apple-form-post.js",
+      "require": "./dist/server/apple-form-post.cjs"
+    },
     "./package.json": "./package.json"
   },
   "files": [

@@ -161,6 +161,35 @@ Concrete example (custom backend + redirect + error handling):
 - **Deeplink must include `oauth/`**: `myapp://oauth/auth` works; `myapp://auth` does not.
 - **Deeplink scheme is required**: we never default it; pass your scheme from Despia.
 
+## Apple `form_post` (Android): tiny server bridge
+
+Apple can return credentials via **`response_mode=form_post`**, which means the browser loads your redirect URL with an **`application/x-www-form-urlencoded` POST body**.
+
+A **static** `/native-callback.html` cannot read that POST body, so you need a **small server route** that:
+
+1. Accepts the POST from Apple
+2. Redirects (`302`) to your static `/native-callback.html?...` with the same fields in the **query string** (or a `session_token` you mint server-side)
+
+This package includes an optional, dependency-free helper:
+
+```ts
+import { handleAppleFormPostRequest } from '@despia/oauth/server/apple-form-post'
+
+export default async function handler(req: Request): Promise<Response> {
+  // Works anywhere you have Web `Request`/`Response`:
+  // Deno, Bun, Cloudflare Workers, Supabase Edge Functions, Convex HTTP actions (fetch API), modern Node (undici).
+  return handleAppleFormPostRequest(req, {
+    appOrigin: 'https://yourapp.com',
+    nativeCallbackPath: '/native-callback.html',
+
+    // Recommended: exchange/validate server-side, then forward an opaque token instead of raw `id_token` in the URL.
+    // mintSessionToken: async (fields) => { /* ... */ return 'opaque' },
+  })
+}
+```
+
+Point Apple’s redirect URI for Android at this route (not directly at the static HTML file).
+
 ## API (small)
 
 - `oauth.signIn({ url, deeplinkScheme, appOrigin, tokenLocation?, exchangeEndpoint?, authPath? })`
