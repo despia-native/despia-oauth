@@ -150,7 +150,7 @@ describe('<despia-oauth-callback> and <despia-oauth-tokens>', () => {
     expect(consoleWarn).toHaveBeenCalled()
     const warning = consoleWarn.mock.calls[0][0] as string
     expect(warning).toMatch(/relative path/)
-    expect(warning).toMatch(/server-rendered/i)
+    expect(warning).toMatch(/despia-native\/despia-oauth/)
 
     consoleWarn.mockRestore()
     global.fetch = originalFetch

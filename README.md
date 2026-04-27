@@ -1,6 +1,6 @@
-# @despia/oauth
+# Despia OAuth
 
-Provider-agnostic OAuth for Despia apps with **zero runtime dependencies**.
+Published on npm as **`@despia/oauth`**. Provider-agnostic OAuth for Despia apps with **zero runtime dependencies**.
 
 Despia OAuth boils down to two URL protocols:
 

@@ -25,13 +25,13 @@
   ],
   "license": "MIT",
   "author": "Despia",
-  "homepage": "https://setup.despia.com/native-features/oauth",
+  "homepage": "https://github.com/despia-native/despia-oauth",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/despia/oauth.git"
+    "url": "git+https://github.com/despia-native/despia-oauth.git"
   },
   "bugs": {
-    "url": "https://github.com/despia/oauth/issues"
+    "url": "https://github.com/despia-native/despia-oauth/issues"
   },
   "type": "module",
   "main": "./dist/index.cjs",

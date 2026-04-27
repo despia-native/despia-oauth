@@ -143,7 +143,7 @@ export class DespiaOAuthCallbackElement extends HTMLElement {
           `exchange. You can skip the round trip by exchanging the code during the ` +
           `GET request that serves /native-callback, then rendering the page with ` +
           `?session_token=… already in the URL. See ` +
-          `https://github.com/despia/oauth#server-rendered-callback`,
+          `https://github.com/despia-native/despia-oauth`,
       )
     }
 
