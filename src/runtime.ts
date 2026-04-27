@@ -28,15 +28,3 @@ export function detectRuntime(): Runtime {
   const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
   return { kind: 'native', platform: isIOS ? 'ios' : 'android' }
 }
-
-export const isDespia = (): boolean => detectRuntime().kind === 'native'
-
-export const isDespiaIOS = (): boolean => {
-  const r = detectRuntime()
-  return r.kind === 'native' && r.platform === 'ios'
-}
-
-export const isDespiaAndroid = (): boolean => {
-  const r = detectRuntime()
-  return r.kind === 'native' && r.platform === 'android'
-}

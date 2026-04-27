@@ -321,14 +321,14 @@ describe('oauth.apple', () => {
 })
 
 describe('oauth namespace shape', () => {
-  it('exposes signIn, apple, tiktok, isIOSNative', () => {
+  it('exposes signIn, apple, tiktok', () => {
     expect(typeof oauth.signIn).toBe('function')
     expect(typeof oauth.apple).toBe('function')
     expect(typeof oauth.tiktok).toBe('function')
-    expect(typeof oauth.isIOSNative).toBe('function')
     // No google / custom — anything not Apple or TikTok goes through signIn.
     expect((oauth as Record<string, unknown>).google).toBeUndefined()
     expect((oauth as Record<string, unknown>).custom).toBeUndefined()
+    expect((oauth as Record<string, unknown>).isIOSNative).toBeUndefined()
   })
 })
 

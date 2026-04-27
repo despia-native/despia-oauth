@@ -24,11 +24,9 @@ describe('Main UMD bundle (window.DespiaOAuth)', () => {
     expect(typeof oauth.signIn).toBe('function')
     expect(typeof oauth.apple).toBe('function')
     expect(typeof oauth.tiktok).toBe('function')
-    expect(typeof oauth.isIOSNative).toBe('function')
 
     // Lower-level escape hatches
     expect(typeof api.detectRuntime).toBe('function')
-    expect(typeof api.isDespia).toBe('function')
     expect(typeof api.openOAuth).toBe('function')
     expect(typeof api.parseCallback).toBe('function')
     expect(typeof api.buildDeeplink).toBe('function')

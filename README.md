@@ -199,7 +199,6 @@ import { oauth } from '@despia/oauth'
 oauth.signIn({ ... })   // any authorize URL you built
 await oauth.apple({ ... })  // iOS/web: Apple JS popup → OauthAppleIOSResult; Android: redirect → OpenOAuthResult
 oauth.tiktok({ ... })   // TikTok authorize + code in state for exchange
-oauth.isIOSNative()     // boolean
 ```
 
 ### `oauth.signIn(config: OauthSignInConfig): OpenOAuthResult`
@@ -249,7 +248,7 @@ Returns `{ kind: 'opened-native' }` or `{ kind: 'navigating-web' }`.
 ## `openOAuth` & runtime
 
 ```ts
-import { openOAuth, detectRuntime, isDespia, isDespiaIOS, isDespiaAndroid } from '@despia/oauth'
+import { openOAuth, detectRuntime } from '@despia/oauth'
 ```
 
 **`openOAuth(oauthUrl: string, options?: { runtime?: Runtime }): OpenOAuthResult`**
@@ -258,13 +257,31 @@ import { openOAuth, detectRuntime, isDespia, isDespiaIOS, isDespiaAndroid } from
 - Native: sets `window.despia = 'oauth://?url=' + encodeURIComponent(oauthUrl)`.
 - Web: `window.location.href = oauthUrl`.
 
-**`detectRuntime(): Runtime`**
+**`detectRuntime(): Runtime`** — what this library uses internally (`oauth.apple`, `openOAuth`, etc.). Same UA rules as below.
 
-- `{ kind: 'native', platform: 'ios' | 'android' }` — `navigator.userAgent` contains `despia` (case-insensitive).
-- `{ kind: 'web' }` — browser, not Despia.
-- `{ kind: 'ssr' }` — no `navigator` (do not treat as web for URL building).
+| Return value | Meaning |
+|--------------|---------|
+| `{ kind: 'native', platform: 'ios' \| 'android' }` | `userAgent` contains `despia` (any case); iOS if UA matches iPhone/iPad/iPod. |
+| `{ kind: 'web' }` | Browser, not Despia. |
+| `{ kind: 'ssr' }` | No `navigator` — don’t build native OAuth URLs on the server. |
 
-**`isDespia()` / `isDespiaIOS()` / `isDespiaAndroid()`** — convenience booleans.
+**Your own checks (start of flow)** — we don’t ship `isDespia` / `isDespiaIOS` / `isDespiaAndroid` on the package; use `userAgent` in your app if you need to branch before OAuth:
+
+```ts
+// Detect if running in Despia
+const isDespia = navigator.userAgent.toLowerCase().includes('despia')
+
+// Detect iOS in Despia
+const isDespiaIOS =
+  isDespia &&
+  (navigator.userAgent.toLowerCase().includes('iphone') ||
+    navigator.userAgent.toLowerCase().includes('ipad'))
+
+// Detect Android in Despia
+const isDespiaAndroid = isDespia && navigator.userAgent.toLowerCase().includes('android')
+```
+
+`detectRuntime()` uses the same `despia` substring and also treats **iPod** as iOS (`/ipod/i`). Add `|| navigator.userAgent.toLowerCase().includes('ipod')` to the iOS check if you want identical behavior.
 
 ---
 

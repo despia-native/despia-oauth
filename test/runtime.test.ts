@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { detectRuntime, isDespia, isDespiaIOS, isDespiaAndroid } from '../src/runtime.js'
+import { detectRuntime } from '../src/runtime.js'
 
 describe('detectRuntime', () => {
   let originalUA: PropertyDescriptor | undefined
@@ -24,23 +24,16 @@ describe('detectRuntime', () => {
   it('detects Despia iOS', () => {
     setUA('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) AppleWebKit/605 despia/1.0')
     expect(detectRuntime()).toEqual({ kind: 'native', platform: 'ios' })
-    expect(isDespia()).toBe(true)
-    expect(isDespiaIOS()).toBe(true)
-    expect(isDespiaAndroid()).toBe(false)
   })
 
   it('detects Despia Android', () => {
     setUA('Mozilla/5.0 (Linux; Android 13) AppleWebKit/537 despia/1.0')
     expect(detectRuntime()).toEqual({ kind: 'native', platform: 'android' })
-    expect(isDespia()).toBe(true)
-    expect(isDespiaIOS()).toBe(false)
-    expect(isDespiaAndroid()).toBe(true)
   })
 
   it('detects regular web (no despia in UA)', () => {
     setUA('Mozilla/5.0 (Macintosh) AppleWebKit/605 Safari/605')
     expect(detectRuntime()).toEqual({ kind: 'web' })
-    expect(isDespia()).toBe(false)
   })
 
   it('case-insensitive despia match', () => {

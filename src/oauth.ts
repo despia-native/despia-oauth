@@ -1,5 +1,5 @@
 import { openOAuth, type OpenOAuthResult } from './open.js'
-import { detectRuntime, isDespiaIOS } from './runtime.js'
+import { detectRuntime } from './runtime.js'
 import { encodeState, type TokenLocation, type TokenSpec } from './deeplink.js'
 import { DespiaOAuthError } from './types.js'
 
@@ -314,8 +314,6 @@ export const oauth = {
   apple,
   /** TikTok with server-side code exchange. */
   tiktok,
-  /** True when the current runtime is Despia iOS native. */
-  isIOSNative: isDespiaIOS,
 }
 
 export type { OpenOAuthResult }

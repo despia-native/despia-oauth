@@ -7,10 +7,9 @@
  *
  *   import { oauth } from '@despia/oauth'
  *
- *   oauth.google({ supabaseUrl, deeplinkScheme, appOrigin })
- *   await oauth.apple({ servicesId, deeplinkScheme, appOrigin })  // async on iOS only
+ *   oauth.signIn({ url, deeplinkScheme, appOrigin, tokenLocation?, exchangeEndpoint? })
+ *   await oauth.apple({ servicesId, deeplinkScheme, appOrigin })  // async on iOS / web (popup)
  *   oauth.tiktok({ clientKey, exchangeEndpoint, deeplinkScheme, appOrigin })
- *   oauth.custom({ url, tokenLocation, deeplinkScheme, appOrigin })
  *
  * Drop-in web components for the callback pages:
  *
@@ -39,8 +38,8 @@ export type {
   OauthTikTokConfig,
 } from './oauth.js'
 
-// Runtime detection
-export { detectRuntime, isDespia, isDespiaIOS, isDespiaAndroid } from './runtime.js'
+// Runtime detection (UA-based; same rules as Despia docs)
+export { detectRuntime } from './runtime.js'
 
 // Deeplink construction & state encoding
 export { buildDeeplink, encodeState, decodeState } from './deeplink.js'

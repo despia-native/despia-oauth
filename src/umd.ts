@@ -43,12 +43,7 @@ export type {
   OauthTikTokConfig,
 } from './oauth.js'
 
-export {
-  detectRuntime,
-  isDespia,
-  isDespiaIOS,
-  isDespiaAndroid,
-} from './runtime.js'
+export { detectRuntime } from './runtime.js'
 
 export { buildDeeplink, encodeState, decodeState } from './deeplink.js'
 export type { TokenLocation, TokenSpec } from './deeplink.js'
