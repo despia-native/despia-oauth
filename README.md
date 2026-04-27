@@ -1,14 +1,17 @@
 # @despia/oauth
 
-OAuth for Despia apps with **zero runtime dependencies**.
+Provider-agnostic OAuth for Despia apps with **zero runtime dependencies**.
 
-This library is intentionally small and provider-agnostic:
+Despia OAuth boils down to two URL protocols:
 
-- **Open native secure browser** via a single `window.despia = "oauth://?url=..."` write
-- **Close secure browser + navigate back** via `{scheme}://oauth/...` deeplinks
-- **Generic callbacks** via two drop-in web components:
-  - `<despia-oauth-callback>` for `/native-callback`
-  - `<despia-oauth-tokens>` for `/auth`
+- **Open secure browser session** (native only): `oauth://?url=...`
+- **Close it + return to your WebView**: `{scheme}://oauth/...` (**`oauth/` is required**)
+
+This package is a small wrapper around that mechanism:
+
+- `oauth.signIn(...)` opens the secure browser the right way (native) or navigates normally (web)
+- `<despia-oauth-callback>` implements `/native-callback` (runs inside the secure browser session)
+- `<despia-oauth-tokens>` implements `/auth` (runs inside your WebView)
 
 ## Install
 
@@ -16,7 +19,7 @@ This library is intentionally small and provider-agnostic:
 npm install @despia/oauth
 ```
 
-## The only flow you need to understand
+## How it works (in one minute)
 
 1. Your app calls `oauth.signIn({ url, ... })`
 2. Despia opens a secure browser session (ASWebAuth / Custom Tabs)
@@ -25,20 +28,21 @@ npm install @despia/oauth
 5. Despia closes the browser and navigates your WebView to `/auth?...`
 6. `/auth` reads tokens and sets your session
 
-## Selling point: it auto-detects `?` vs `#`
+## Why this works with “anything”
 
-Most providers put tokens in either:
+Providers return credentials in different places:
 
 - **Query**: `?access_token=...&refresh_token=...`
 - **Fragment**: `#access_token=...&refresh_token=...`
+- **Code flow**: `?code=...` (you exchange it server-side)
 
-This package handles both automatically:
+This package handles all of these by default:
 
-- `<despia-oauth-callback>` and `<despia-oauth-tokens>` (and `parseCallback()`) default to **checking both**.
-- Query wins if both are present.
-- `&` separators are handled normally via `URLSearchParams`.
+- `<despia-oauth-callback>`, `<despia-oauth-tokens>`, and `parseCallback()` default to checking **both query + fragment** (query wins).
+- `&` separators are handled via `URLSearchParams`.
+- For code flow, set `tokenLocation: 'code'` and provide an `exchangeEndpoint` (or handle exchange yourself).
 
-If you want to force a specific mode, set `tokenLocation` when opening:
+If you want to be explicit, set `tokenLocation`:
 
 ```ts
 oauth.signIn({ url, deeplinkScheme, appOrigin, tokenLocation: 'fragment' }) // hash
@@ -47,7 +51,16 @@ oauth.signIn({ url, deeplinkScheme, appOrigin, tokenLocation: 'both' })     // d
 oauth.signIn({ url, deeplinkScheme, appOrigin, tokenLocation: 'code', exchangeEndpoint })
 ```
 
-## 1) Sign-in button (any provider)
+## Quick start
+
+You need exactly two routes/pages:
+
+- `/native-callback` (secure browser session)
+- `/auth` (your WebView)
+
+And one sign-in call.
+
+### 1) Sign-in button (any provider)
 
 Build the authorize URL however you want (Supabase, Auth0, Clerk, custom backend…) and pass it in:
 
@@ -56,13 +69,13 @@ import { oauth } from '@despia/oauth'
 
 oauth.signIn({
   url: 'https://your-idp.example/authorize?...',
-  deeplinkScheme: 'myapp',        // required, user-provided
+  deeplinkScheme: 'myapp',   // required, user-provided
   appOrigin: 'https://yourapp.com',
-  tokenLocation: 'fragment',      // 'fragment' | 'query' | 'both' | 'code'
+  tokenLocation: 'both',     // default: detects query vs fragment
 })
 ```
 
-If your provider returns `?code=...` and you want `/native-callback` to exchange it server-side:
+If your provider returns `?code=...` and you want `/native-callback` to exchange it:
 
 ```ts
 oauth.signIn({
@@ -74,7 +87,7 @@ oauth.signIn({
 })
 ```
 
-## 2) `/native-callback` page (secure browser)
+### 2) `/native-callback` page (secure browser session)
 
 Create `public/native-callback.html`:
 
@@ -88,12 +101,13 @@ Create `public/native-callback.html`:
 <script type="module" src="https://unpkg.com/@despia/oauth/dist/umd/web-components.min.js"></script>
 ```
 
-This element:
-- Parses tokens from query/fragment based on `state`
-- Optionally exchanges `code` via `exchangeEndpoint` (from `state` or attribute)
-- Fires the deeplink `{scheme}://oauth/auth?...`
+What it does:
 
-## 3) `/auth` page (WebView)
+- Parses tokens from query and/or fragment (based on `tokenLocation`)
+- If `tokenLocation: 'code'`, POSTs `{ code, redirect_uri, state }` to your `exchangeEndpoint`
+- Fires the deeplink `{scheme}://oauth/auth?...` to close the secure browser and return to your app
+
+### 3) `/auth` page (WebView)
 
 Add the element and listen for tokens:
 
@@ -141,6 +155,11 @@ Concrete example (custom backend + redirect + error handling):
   })
 </script>
 ```
+
+## Notes / gotchas (short)
+
+- **Deeplink must include `oauth/`**: `myapp://oauth/auth` works; `myapp://auth` does not.
+- **Deeplink scheme is required**: we never default it; pass your scheme from Despia.
 
 ## API (small)
 
