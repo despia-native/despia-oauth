@@ -89,6 +89,37 @@ Add the element and listen for tokens:
 </script>
 ```
 
+Concrete example (custom backend + redirect + error handling):
+
+```html
+<despia-oauth-tokens redirect-on-success="/"></despia-oauth-tokens>
+
+<script type="module">
+  import 'https://unpkg.com/@despia/oauth/dist/umd/web-components.min.js'
+
+  const el = document.querySelector('despia-oauth-tokens')
+
+  el.addEventListener('oauth-error', (e) => {
+    console.error('OAuth error:', e.detail) // { code, description }
+  })
+
+  el.addEventListener('tokens', async (e) => {
+    const t = e.detail // { access_token?, refresh_token?, id_token?, code?, session_token?, ... }
+
+    // Send whatever you received to your backend to establish a session.
+    await fetch('/api/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(t),
+      credentials: 'include',
+    })
+
+    // If you didn't set redirect-on-success, redirect manually:
+    // window.location.href = '/'
+  })
+</script>
+```
+
 ## API (small)
 
 - `oauth.signIn({ url, deeplinkScheme, appOrigin, tokenLocation?, exchangeEndpoint?, authPath? })`
