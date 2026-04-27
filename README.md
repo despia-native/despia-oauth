@@ -189,7 +189,12 @@ import '@despia/oauth/web-components'
 **Manual register**
 
 ```ts
-import { defineDespiaOAuthElements } from '@despia/oauth/web-components/manual'
+import {
+  defineDespiaOAuthElements,
+  DespiaOAuthCallbackElement,
+  DespiaOAuthTokensElement,
+} from '@despia/oauth/web-components/manual'
+
 defineDespiaOAuthElements()
 ```
 
