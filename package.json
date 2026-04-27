@@ -45,21 +45,6 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./react": {
-      "types": "./dist/react/index.d.ts",
-      "import": "./dist/react/index.js",
-      "require": "./dist/react/index.cjs"
-    },
-    "./vue": {
-      "types": "./dist/vue/index.d.ts",
-      "import": "./dist/vue/index.js",
-      "require": "./dist/vue/index.cjs"
-    },
-    "./svelte": {
-      "types": "./dist/svelte/index.d.ts",
-      "import": "./dist/svelte/index.js",
-      "require": "./dist/svelte/index.cjs"
-    },
     "./web-components": {
       "types": "./dist/web-components/index.d.ts",
       "import": "./dist/web-components/index.js",
@@ -70,12 +55,10 @@
       "import": "./dist/web-components/manual.js",
       "require": "./dist/web-components/manual.cjs"
     },
-    "./templates/native-callback.html": "./templates/native-callback.html",
     "./package.json": "./package.json"
   },
   "files": [
     "dist",
-    "templates",
     "README.md",
     "LICENSE"
   ],
@@ -88,28 +71,11 @@
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "npm run typecheck && npm test && npm run build"
   },
-  "peerDependencies": {
-    "react": ">=16.8.0",
-    "vue": ">=3.0.0",
-    "svelte": ">=3.0.0"
-  },
-  "peerDependenciesMeta": {
-    "react": { "optional": true },
-    "vue": { "optional": true },
-    "svelte": { "optional": true }
-  },
   "devDependencies": {
-    "@testing-library/react": "^14.0.0",
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
     "jsdom": "^23.0.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "svelte": "^4.2.0",
     "tsup": "^8.0.0",
     "typescript": "^5.3.0",
-    "vitest": "^1.0.0",
-    "vue": "^3.4.0"
+    "vitest": "^1.0.0"
   },
   "publishConfig": {
     "access": "public"

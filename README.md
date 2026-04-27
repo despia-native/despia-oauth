@@ -295,106 +295,6 @@ See [`templates/native-callback-server-rendered.html`](./templates/native-callba
 </script>
 ```
 
-### React + Supabase
-
-```tsx
-import { OAuthCallbackHandler } from '@despia/oauth/react'
-import { useNavigate } from 'react-router-dom'
-import { supabase } from './lib/supabase'
-
-export function AuthRoute() {
-  const navigate = useNavigate()
-  return (
-    <OAuthCallbackHandler
-      onTokens={async (tokens) => {
-        if (tokens.access_token) {
-          await supabase.auth.setSession({
-            access_token: tokens.access_token,
-            refresh_token: tokens.refresh_token ?? '',
-          })
-          navigate('/')
-        }
-      }}
-    />
-  )
-}
-```
-
-### React + Convex / Firebase / custom backend
-
-```tsx
-// Convex
-import { useAuthActions } from '@convex-dev/auth/react'
-const { signIn } = useAuthActions()
-
-<OAuthCallbackHandler onTokens={async (tokens) => {
-  if (tokens.id_token) await signIn('apple', { idToken: tokens.id_token })
-}} />
-
-// Firebase
-import { GoogleAuthProvider, signInWithCredential, getAuth } from 'firebase/auth'
-
-<OAuthCallbackHandler onTokens={async (tokens) => {
-  const credential = GoogleAuthProvider.credential(tokens.id_token, tokens.access_token)
-  await signInWithCredential(getAuth(), credential)
-}} />
-
-// Custom backend
-<OAuthCallbackHandler onTokens={async (tokens) => {
-  await fetch('/api/session', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(tokens),
-    credentials: 'include',
-  })
-}} />
-```
-
-### Vue 3
-
-```vue
-<script setup lang="ts">
-import { useOAuthCallback } from '@despia/oauth/vue'
-import { useRouter } from 'vue-router'
-import { supabase } from '@/lib/supabase'
-
-const router = useRouter()
-useOAuthCallback(async ({ tokens }) => {
-  if (tokens.access_token) {
-    await supabase.auth.setSession({
-      access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token ?? '',
-    })
-    router.push('/')
-  }
-})
-</script>
-
-<template><div>Signing you in…</div></template>
-```
-
-### Svelte / SvelteKit
-
-```svelte
-<script lang="ts">
-  import { useOAuthCallback } from '@despia/oauth/svelte'
-  import { goto } from '$app/navigation'
-  import { supabase } from '$lib/supabase'
-
-  useOAuthCallback(async ({ tokens }) => {
-    if (tokens.access_token) {
-      await supabase.auth.setSession({
-        access_token: tokens.access_token,
-        refresh_token: tokens.refresh_token ?? '',
-      })
-      goto('/')
-    }
-  })
-</script>
-
-<p>Signing you in…</p>
-```
-
 ---
 
 ## API reference
@@ -415,10 +315,6 @@ useOAuthCallback(async ({ tokens }) => {
 | `buildDeeplink(scheme, path, params?)` | `myapp://oauth/path?...`. |
 | `encodeState({ scheme, csrf?, spec? })` / `decodeState(state)` | State encoding. |
 | `DespiaOAuthError` | Error class with a typed `code`. |
-
-### `@despia/oauth/react`, `/vue`, `/svelte`
-
-Each exports a `useOAuthCallback` hook/composable. React also exports `<OAuthCallbackHandler>`.
 
 ### `@despia/oauth/web-components`
 
