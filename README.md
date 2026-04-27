@@ -17,31 +17,12 @@ npm install @despia/oauth
 
 ## Flow
 
-```mermaid
-sequenceDiagram
-  participant WV as WebView (your app)
-  participant DR as Despia runtime
-  participant SB as Secure browser (ASWebAuth / Custom Tabs)
-  participant IdP as Your IdP (any URL you built)
+1. `oauth.signIn` → Despia opens your IdP in a secure browser (`oauth://?url=…` under the hood).
+2. IdP redirects to `/native-callback` with tokens in the query, the hash, or `?code=` (your choice / IdP behavior).
+3. `<despia-oauth-callback>` sends `{scheme}://oauth/auth?…` so the secure session ends.
+4. WebView opens `/auth?…`; `<despia-oauth-tokens>` (or your own listener) reads the params.
 
-  WV->>DR: oauth.signIn → oauth://?url=…
-  DR->>SB: Opens IdP in secure session
-  SB->>IdP: User signs in
-  IdP->>SB: HTTP redirect to /native-callback (query, fragment, or code)
-  Note over SB: Static page: despia-oauth-callback
-  SB->>DR: Deeplink myapp://oauth/auth?… (oauth/ required)
-  DR->>WV: WebView navigates to /auth?…
-  Note over WV: despia-oauth-tokens → your session
-```
-
-Apple on Android sometimes uses `form_post`: Apple POSTs a form body to your server instead of putting tokens in the URL. Static HTML can’t read that body, so add a route that turns the POST into a normal GET on `/native-callback.html?...`. Helper: `@despia/oauth/server/apple-form-post` (section at the bottom of this file).
-
-```mermaid
-flowchart TB
-  A[Apple POST] --> B[Server handler]
-  B --> C[302 → native-callback.html?…]
-  C --> D[Same flow as diagram above]
-```
+**Apple `form_post` (Android):** Apple POSTs a form body to your redirect URL. Static HTML never sees that body, so handle POST on a small server route and **302** to `/native-callback.html?…` with the same fields as query params—then steps 3–4 are unchanged. Optional helper: `@despia/oauth/server/apple-form-post` (full snippet at the end of this README).
 
 ## Callback shape (query, hash, code)
 
